@@ -173,11 +173,27 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
 
     private void CopyUncompletedMaps()
     {
-        var separator = ", ";
-        string missingMapsString = string.Join(separator, MissingMaps);
-        string missingUniqueMapsString = string.Join(separator, MissingUniqueMaps);
+        if (AmountMissing + AmountUniqueMissing == 0)
+        {
+            return;
+        }
 
-        ImGui.SetClipboardText(missingMapsString + separator + missingUniqueMapsString);
+        var stringToClipboard = "";
+        var separator = ", ";
+
+        if (AmountMissing > 0)
+        {
+            var missingMapsString = string.Join(separator, MissingMaps);
+
+            stringToClipboard += missingMapsString;
+        }
+        if (AmountUniqueMissing > 0)
+        {
+            var missingUniqueMapsString = string.Join(separator, MissingUniqueMaps);
+            stringToClipboard += separator + missingUniqueMapsString;
+        }
+
+        ImGui.SetClipboardText(stringToClipboard);
         DebugWindow.LogMsg("Uncompleted Maps copied", 3f);
     }
 
