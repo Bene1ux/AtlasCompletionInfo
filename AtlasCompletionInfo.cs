@@ -1,136 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using ExileCore;
+using ExileCore.PoEMemory.FilesInMemory.Atlas;
+using ExileCore.PoEMemory.MemoryObjects;
+using GameOffsets;
 using ImGuiNET;
 using SharpDX;
+using static System.Net.Mime.MediaTypeNames;
 using Vector2 = System.Numerics.Vector2;
 
 namespace AtlasCompletionInfo;
 
 public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSettings>
 {
-    private readonly string[] AtlasMaps = [
-        "Academy",
-        "Acid Caverns",
-        "Arachnid Nest",
-        "Arcade",
-        "Arena",
-        "Arid Lake",
-        "Arsenal",
-        "Ashen Wood",
-        "Atoll",
-        "Barrows",
-        "Basilica",
-        "Belfry",
-        "Bog",
-        "Bone Crypt",
-        "Bramble Valley",
-        "Burial Chambers",
-        "Cage",
-        "Canyon",
-        "Castle Ruins",
-        "Cells",
-        "Cemetery",
-        "Channel",
-        "Cold River",
-        "Conservatory",
-        "Courthouse",
-        "Courtyard",
-        "Crimson Temple",
-        "Crimson Township",
-        "Crystal Ore",
-        "Cursed Crypt",
-        "Defiled Cathedral",
-        "Desert Spring",
-        "Dry Sea",
-        "Dunes",
-        "Dungeon",
-        "Estuary",
-        "Excavation",
-        "Fields",
-        "Flooded Mine",
-        "Forbidden Woods",
-        "Forking River",
-        "Foundry",
-        "Frozen Cabins",
-        "Fungal Hollow",
-        "Gardens",
-        "Glacier",
-        "Grave Trough",
-        "Graveyard",
-        "Grotto",
-        "Iceberg",
-        "Jungle Valley",
-        "Lair",
-        "Lava Chamber",
-        "Lava Lake",
-        "Lookout",
-        "Mausoleum",
-        "Maze",
-        "Mineral Pools",
-        "Moon Temple",
-        "Museum",
-        "Necropolis",
-        "Orchard",
-        "Overgrown Shrine",
-        "Palace",
-        "Park",
-        "Phantasmagoria",
-        "Pier",
-        "Pit",
-        "Plateau",
-        "Plaza",
-        "Port",
-        "Primordial Pool",
-        "Promenade",
-        "Reef",
-        "Residence",
-        "Shipyard",
-        "Shore",
-        "Shrine",
-        "Siege",
-        "Silo",
-        "Spider Forest",
-        "Stagnation",
-        "Strand",
-        "Sulphur Vents",
-        "Sunken City",
-        "Temple",
-        "Terrace",
-        "Thicket",
-        "Tower",
-        "Toxic Sewer",
-        "Tropical Island",
-        "Underground River",
-        "Underground Sea",
-        "Vaal Pyramid",
-        "Vault",
-        "Volcano",
-        "Waste Pool",
-        "Wasteland",
-        "Waterways",
-        "Wharf"
-    ];
-    private readonly string[] AtlasUniqueMaps = [
-        "Acton's Nightmare",
-        "Caer Blaidd, Wolfpack's Den",
-        "Death and Taxes",
-        "Hallowed Ground",
-        "Maelström of Chaos",
-        "Mao Kun",
-        "Oba's Cursed Trove",
-        "Olmec's Sanctum",
-        "Pillars of Arun",
-        "Poorjoy's Asylum",
-        "The Coward's Trial",
-        "The Putrid Cloister",
-        "The Twilight Temple",
-        "Vaults of Atziri",
-        "Whakawairua Tuahu"
-    ];
+
+    List<(string, int)> AtlasMaps = new List<(string, int)>();
+    List<(string, int)> AtlasUniqueMaps = new List<(string, int)>();
+    public string[] MapsToExclude;
+
     private string[] CompletedMaps = [];
-    private string[] MissingMaps = [];
-    private string[] MissingUniqueMaps = [];
+
+    List<(string, int)> MissingMaps = new List<(string, int)>();
+    List<(string, int)> MissingUniqueMaps = new List<(string, int)>();
+
     private int AmountCompleted = 0;
     private int NewAmountCompleted = 0;
     private int AmountMissing = 0;
@@ -140,6 +33,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
     public override bool Initialise()
     {
         Settings.Copy.OnPressed = CopyUncompletedMaps;
+        UpdateAtlasMaps();
         return true;
     }
 
@@ -160,15 +54,53 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
 
         return null;
     }
+    private void UpdateAtlasMaps()
+    {
+        var ingameState = GameController.Game.IngameState;
+        var atlasNodesAux = ingameState.TheGame.Files.AtlasNodes.EntriesList;
+
+        List<(string, int, int)> AtlasMapsFromAtlasNodes = new List<(string, int, int)>();
+        foreach (var node in atlasNodesAux)
+        {
+
+            var baseAtlasNodeAddress = node.Address;
+            var tier0 = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x51);
+
+            var AtlasNodeNeighbours = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x41);
+
+            AtlasMapsFromAtlasNodes.Add((node.Area.Name, AtlasNodeNeighbours, tier0));
+
+        }
+
+        AtlasUniqueMaps = AtlasMapsFromAtlasNodes
+            .Where(item => item.Item2 == 1)
+            .Select(tuple => (tuple.Item1, tuple.Item3)).ToList();
+
+        MapsToExclude = AtlasMapsFromAtlasNodes
+           .Where(item => item.Item2 <= 1)
+           .Select(x => x.Item1).ToArray();
+
+        AtlasMaps = AtlasMapsFromAtlasNodes.Select(tuple => (tuple.Item1, tuple.Item3)).ToList().Where(tuple => !MapsToExclude.Contains(tuple.Item1))
+            .ToList();
+
+    }
 
     private void UpdateMapsArrays()
     {
-        CompletedMaps = GameController.IngameState.ServerData.BonusCompletedAreas.Select(area => area.Name).ToArray();
-        MissingMaps = AtlasMaps.Except(CompletedMaps).ToArray();
-        MissingUniqueMaps = AtlasUniqueMaps.Except(CompletedMaps).ToArray();
 
-        AmountMissing = MissingMaps.Length;
-        AmountUniqueMissing = MissingUniqueMaps.Length;
+        CompletedMaps = GameController.IngameState.ServerData.BonusCompletedAreas.Select(area => area.Name).ToArray();
+        if (CompletedMaps.Count() > 0)
+        {
+            var MissingMapsAux = AtlasMaps.Where(tuple => !CompletedMaps.Contains(tuple.Item1)).ToList();
+            var MissingUniqueMapsAux = AtlasUniqueMaps.Where(tuple => !CompletedMaps.Contains(tuple.Item1)).ToList();
+
+            MissingMaps = MissingMapsAux.OrderBy(tuple => tuple.Item2).ToList();
+            MissingUniqueMaps = MissingUniqueMapsAux.OrderBy(tuple => tuple.Item2).ToList();
+            AmountMissing = MissingMaps.Count();
+            AmountUniqueMissing = MissingUniqueMaps.Count();
+
+        }
+
     }
 
     private void CopyUncompletedMaps()
@@ -183,13 +115,13 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
 
         if (AmountMissing > 0)
         {
-            var missingMapsString = string.Join(separator, MissingMaps);
+            var missingMapsString = string.Join(separator, MissingMaps.Select(tuple => tuple.Item1 + " T" + tuple.Item2));
 
             stringToClipboard += missingMapsString;
         }
         if (AmountUniqueMissing > 0)
         {
-            var missingUniqueMapsString = string.Join(separator, MissingUniqueMaps);
+            var missingUniqueMapsString = string.Join(separator, MissingUniqueMaps.Select(tuple => tuple.Item1 + " T" + tuple.Item2));
             stringToClipboard += separator + missingUniqueMapsString;
         }
 
@@ -249,7 +181,8 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
                 var entryX = startX + columnIndex * (entryWidth + columnSpacing);
                 var entryY = startY + rowIndex * (entryHeight + rowSpacing);
 
-                var entryText = MissingMaps[i];
+                var entryText = MissingMaps[i].Item1 + " " + MissingMaps[i].Item2;
+
                 var entryTextX = entryX + textPadding;
                 var entryTextY = entryY + (entryHeight - fontSize) / 2;
 
@@ -260,7 +193,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
             // Unique Maps
             var uniqueEntryWidth = 200;
             var separatorPad = 30;
-            var uniqueMapsStartX = startX + separatorPad + (entryWidth + columnSpacing) * ((MissingMaps.Length + maxEntriesPerColumn - 1) / maxEntriesPerColumn);
+            var uniqueMapsStartX = startX + separatorPad + (entryWidth + columnSpacing) * ((MissingMaps.Count() + maxEntriesPerColumn - 1) / maxEntriesPerColumn);
             for (int i = 0; i < AmountUniqueMissing; i++)
             {
                 var columnIndex = i / maxEntriesPerColumn;
@@ -269,7 +202,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
                 var entryX = uniqueMapsStartX + columnIndex * (entryWidth + columnSpacing);
                 var entryY = startY + rowIndex * (entryHeight + rowSpacing);
 
-                var entryText = MissingUniqueMaps[i];
+                var entryText = MissingUniqueMaps[i].Item1 + " " + MissingUniqueMaps[i].Item2;
                 var entryTextX = entryX + textPadding;
                 var entryTextY = entryY + (entryHeight - fontSize) / 2;
 
