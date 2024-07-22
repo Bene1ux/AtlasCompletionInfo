@@ -64,9 +64,11 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
         {
 
             var baseAtlasNodeAddress = node.Address;
-            var tier0 = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x51);
+            //var tier0 = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x51);
+            var tier0 = node.TierProgression[0];
 
-            var AtlasNodeNeighbours = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x41);
+            //var AtlasNodeNeighbours = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x41);
+            var AtlasNodeNeighbours = node.Connections.Count();
 
             AtlasMapsFromAtlasNodes.Add((node.Area.Name, AtlasNodeNeighbours, tier0));
 
