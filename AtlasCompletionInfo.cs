@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore;
-using ExileCore.PoEMemory.FilesInMemory.Atlas;
-using ExileCore.PoEMemory.MemoryObjects;
-using GameOffsets;
 using ImGuiNET;
 using SharpDX;
-using static System.Net.Mime.MediaTypeNames;
 using Vector2 = System.Numerics.Vector2;
 
 namespace AtlasCompletionInfo;
@@ -33,6 +29,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
     public override bool Initialise()
     {
         Settings.Copy.OnPressed = CopyUncompletedMaps;
+        Settings.SortAlphabetically.OnValueChanged += (sender, newValue) => UpdateMapsArrays();
         UpdateAtlasMaps();
         return true;
     }
@@ -68,7 +65,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
             var tier0 = node.TierProgression[0];
 
             //var AtlasNodeNeighbours = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x41);
-            var AtlasNodeNeighbours = node.Connections.Count();
+            var AtlasNodeNeighbours = node.Connections.Count;
 
             AtlasMapsFromAtlasNodes.Add((node.Area.Name, AtlasNodeNeighbours, tier0));
 
@@ -89,20 +86,25 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
 
     private void UpdateMapsArrays()
     {
-
         CompletedMaps = GameController.IngameState.ServerData.BonusCompletedAreas.Select(area => area.Name).ToArray();
-        if (CompletedMaps.Count() > 0)
+        if (CompletedMaps.Length > 0)
         {
             var MissingMapsAux = AtlasMaps.Where(tuple => !CompletedMaps.Contains(tuple.Item1)).ToList();
             var MissingUniqueMapsAux = AtlasUniqueMaps.Where(tuple => !CompletedMaps.Contains(tuple.Item1)).ToList();
 
-            MissingMaps = MissingMapsAux.OrderBy(tuple => tuple.Item2).ToList();
-            MissingUniqueMaps = MissingUniqueMapsAux.OrderBy(tuple => tuple.Item2).ToList();
-            AmountMissing = MissingMaps.Count();
-            AmountUniqueMissing = MissingUniqueMaps.Count();
-
+            if (!Settings.SortAlphabetically)
+            {
+                MissingMaps = MissingMapsAux.OrderBy(tuple => tuple.Item2).ToList();
+                MissingUniqueMaps = MissingUniqueMapsAux.OrderBy(tuple => tuple.Item2).ToList();
+            }
+            else
+            {
+                MissingMaps = MissingMapsAux.OrderBy(tuple => tuple.Item1).ToList();
+                MissingUniqueMaps = MissingUniqueMapsAux.OrderBy(tuple => tuple.Item1).ToList();
+            }
+            AmountMissing = MissingMaps.Count;
+            AmountUniqueMissing = MissingUniqueMaps.Count;
         }
-
     }
 
     private void CopyUncompletedMaps()
@@ -117,13 +119,13 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
 
         if (AmountMissing > 0)
         {
-            var missingMapsString = string.Join(separator, MissingMaps.Select(tuple => tuple.Item1 + " T" + tuple.Item2));
+            var missingMapsString = string.Join(separator, MissingMaps.Select(tuple => tuple.Item1 + (Settings.IncludeBaseTiers ? " T" + tuple.Item2 : string.Empty)));
 
             stringToClipboard += missingMapsString;
         }
         if (AmountUniqueMissing > 0)
         {
-            var missingUniqueMapsString = string.Join(separator, MissingUniqueMaps.Select(tuple => tuple.Item1 + " T" + tuple.Item2));
+            var missingUniqueMapsString = string.Join(separator, MissingUniqueMaps.Select(tuple => tuple.Item1 + (Settings.IncludeBaseTiers ? " T" + tuple.Item2 : string.Empty)));
             stringToClipboard += separator + missingUniqueMapsString;
         }
 
@@ -183,7 +185,12 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
                 var entryX = startX + columnIndex * (entryWidth + columnSpacing);
                 var entryY = startY + rowIndex * (entryHeight + rowSpacing);
 
-                var entryText = MissingMaps[i].Item1 + " " + MissingMaps[i].Item2;
+                var entryText = MissingMaps[i].Item1;
+
+                if (Settings.ShowTiers)
+                {
+                    entryText += " " + MissingMaps[i].Item2;
+                }
 
                 var entryTextX = entryX + textPadding;
                 var entryTextY = entryY + (entryHeight - fontSize) / 2;
@@ -195,7 +202,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
             // Unique Maps
             var uniqueEntryWidth = 200;
             var separatorPad = 30;
-            var uniqueMapsStartX = startX + separatorPad + (entryWidth + columnSpacing) * ((MissingMaps.Count() + maxEntriesPerColumn - 1) / maxEntriesPerColumn);
+            var uniqueMapsStartX = startX + separatorPad + (entryWidth + columnSpacing) * ((MissingMaps.Count + maxEntriesPerColumn - 1) / maxEntriesPerColumn);
             for (int i = 0; i < AmountUniqueMissing; i++)
             {
                 var columnIndex = i / maxEntriesPerColumn;
@@ -204,7 +211,13 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
                 var entryX = uniqueMapsStartX + columnIndex * (entryWidth + columnSpacing);
                 var entryY = startY + rowIndex * (entryHeight + rowSpacing);
 
-                var entryText = MissingUniqueMaps[i].Item1 + " " + MissingUniqueMaps[i].Item2;
+                var entryText = MissingUniqueMaps[i].Item1;
+
+                if (Settings.ShowTiers)
+                {
+                    entryText += " " + MissingUniqueMaps[i].Item2;
+                }
+
                 var entryTextX = entryX + textPadding;
                 var entryTextY = entryY + (entryHeight - fontSize) / 2;
 
