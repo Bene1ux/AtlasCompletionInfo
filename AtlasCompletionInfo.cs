@@ -94,8 +94,9 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
 
             if (!Settings.SortAlphabetically)
             {
-                MissingMaps = MissingMapsAux.OrderBy(tuple => tuple.Item2).ToList();
-                MissingUniqueMaps = MissingUniqueMapsAux.OrderBy(tuple => tuple.Item2).ToList();
+                MissingMaps = MissingMapsAux.OrderBy(tuple => tuple.Item2).ThenBy(tuple => tuple.Item1).ToList();
+    
+                MissingUniqueMaps = MissingUniqueMapsAux.OrderBy(tuple => tuple.Item2).ThenBy(tuple => tuple.Item1).ToList();
             }
             else
             {
