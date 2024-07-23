@@ -12,7 +12,7 @@ public class AtlasCompletionInfoSettings : ISettings
     [Menu("Show Maps on Atlas screen")]
     public ToggleNode ShowMapsOnAtlas { get; set; } = new ToggleNode(false);
 
-    [Menu("Sorty alphabetically")]
+    [Menu("Sort alphabetically")]
     public ToggleNode SortAlphabetically { get; set; } = new ToggleNode(false);
 
     [Menu("Show Base Map Tiers")]
