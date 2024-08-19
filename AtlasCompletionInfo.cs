@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore;
-using ExileCore.PoEMemory.Components;
 using ImGuiNET;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
@@ -122,7 +121,6 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
         if (AmountMissing > 0)
         {
             var missingMapsString = string.Join(separator, MissingMaps.Select(tuple => tuple.Item1 + (Settings.IncludeBaseTiers ? " T" + tuple.Item2 : string.Empty)));
-
             stringToClipboard += missingMapsString;
         }
         if (AmountUniqueMissing > 0)
@@ -135,18 +133,6 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
         DebugWindow.LogMsg("Uncompleted Maps copied", 3f);
     }
 
-    private bool ShouldDrawParty()
-    {
-        var anyFullscreenPanelVisible = GameController.IngameState.IngameUi.FullscreenPanels.Any(panel => panel.IsVisible);
-        if (!anyFullscreenPanelVisible &&
-            !GameController.Game.IngameState.IngameUi.OpenLeftPanel.IsVisible &&
-            !GameController.IngameState.IngameUi.ChatTitlePanel.IsVisible)
-        {
-            return true;
-        }
-        return false;
-    }
-
     public override void Render()
     {
         if (Settings.HighlightPartyMembers &&
@@ -154,16 +140,23 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
             !GameController.Game.IngameState.IngameUi.OpenLeftPanel.IsVisible &&
             !GameController.IngameState.IngameUi.ChatTitlePanel.IsVisible)
         {
-            var partyPlayers = GameController.IngameState.IngameUi.PartyElement.Children[0].Children[0].Children;
+            var partyElement = GameController.IngameState.IngameUi.PartyElement;
 
-            foreach (var player in partyPlayers)
+            var partyPlayers = partyElement?.Children.FirstOrDefault()?.Children.FirstOrDefault()?.Children;
+
+            if (partyPlayers != null && partyPlayers.Count > 0)
             {
-                var areaName = player.Children[2].Text;
-
-                if (MissingMaps.Any(map => map.Item1 == areaName))
+                foreach (var player in partyPlayers)
                 {
-                    var pos = player.GetClientRect();
-                    Graphics.DrawFrame(pos, new Color(0, 255, 0, 255), 2);
+                    var playerAreaElement = player.Children.ElementAtOrDefault(2);
+                    var areaName = playerAreaElement?.Text;
+
+                    if (!string.IsNullOrEmpty(areaName) &&
+                        (MissingMaps.Any(map => map.Item1 == areaName) || MissingUniqueMaps.Any(map => map.Item1 == areaName)))
+                    {
+                        var pos = player.GetClientRect();
+                        Graphics.DrawFrame(pos, new Color(0, 255, 0, 255), 2);
+                    }
                 }
             }
         }
@@ -193,7 +186,6 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
             var hoverCheck = ImGui.GetMousePos();
             if (headerImage.Contains(hoverCheck.X, hoverCheck.Y))
             {
-
                 var entryWidth = 150;
                 var columnSpacing = 10;
                 var rowSpacing = 5;
