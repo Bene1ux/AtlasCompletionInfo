@@ -60,7 +60,6 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
         List<(string, int, int)> AtlasMapsFromAtlasNodes = [];
         foreach (var node in atlasNodesAux)
         {
-
             var baseAtlasNodeAddress = node.Address;
             //var tier0 = ingameState.M.Read<int>(baseAtlasNodeAddress + 0x51);
             var tier0 = node.TierProgression[0];
@@ -141,7 +140,19 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
             !GameController.IngameState.IngameUi.ChatTitlePanel.IsVisible)
         {
             var partyElement = GameController.IngameState.IngameUi.PartyElement;
+            foreach (var partyPlayer in partyElement.PlayerElements)
+            {
+                var areaName = partyPlayer.ZoneName;
+                if (!string.IsNullOrEmpty(areaName) &&
+                    (MissingMaps.Any(map => map.Item1 == areaName) || MissingUniqueMaps.Any(map => map.Item1 == areaName)))
+                {
+                    var pos = partyPlayer.GetClientRect();
+                    Graphics.DrawFrame(pos, new Color(0, 255, 0, 255), 2);
+                }
+            }
 
+            
+            /*
             var partyPlayers = partyElement?.Children.FirstOrDefault()?.Children.FirstOrDefault()?.Children;
 
             if (partyPlayers != null && partyPlayers.Count > 0)
@@ -158,7 +169,7 @@ public class AtlasCompletionInfo : BaseSettingsPlugin<AtlasCompletionInfoSetting
                         Graphics.DrawFrame(pos, new Color(0, 255, 0, 255), 2);
                     }
                 }
-            }
+            }*/
         }
 
 

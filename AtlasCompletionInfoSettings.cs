@@ -14,16 +14,16 @@ public class AtlasCompletionInfoSettings : ISettings
     public EmptyNode Empty0 { get; set; }
 
     [Menu("Show Maps on Atlas screen", parentIndex = 0)]
-    public ToggleNode ShowMapsOnAtlas { get; set; } = new ToggleNode(false);
+    public ToggleNode ShowMapsOnAtlas { get; set; } = new ToggleNode(true);
 
     [Menu("Sort missing Maps alphabetically", parentIndex = 0)]
-    public ToggleNode SortAlphabetically { get; set; } = new ToggleNode(true);
+    public ToggleNode SortAlphabetically { get; set; } = new ToggleNode(false);
 
     [Menu("Show Base Map Tiers", parentIndex = 0)]
-    public ToggleNode ShowTiers { get; set; } = new ToggleNode(false);
+    public ToggleNode ShowTiers { get; set; } = new ToggleNode(true);
 
     [Menu("Highlight Party Members in uncompleted Maps", parentIndex = 0)]
-    public ToggleNode HighlightPartyMembers { get; set; } = new ToggleNode(false);
+    public ToggleNode HighlightPartyMembers { get; set; } = new ToggleNode(true);
 
 
     [Menu("Copy Settings", 1, CollapsedByDefault = false)]
